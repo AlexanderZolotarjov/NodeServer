@@ -20,11 +20,57 @@ app.use((req, res, next) => {
     next();
 });
 
+function checkValuePages(value) {
+    if(!value) {
+        return value = 1;
+    } else if(value < 1) {
+        return value = 1;
+    } else {
+        return value;
+    }
+};
+
+function checkValueElements(value) {
+    if(!value) {
+        return value = 5;
+    } else if(value < 1) {
+        return value = 5;
+    } else {
+        return value;
+    }
+};
+
 app.get("/users", function(req, res){
-    let sql = "SELECT * FROM users"
-    pool.query(sql, function(err, data) {
+    let countPage = req.query.page;
+    countPage = checkValuePages(countPage);
+    let countElements = req.query.quantity;
+    countElements = checkValueElements(countElements);
+    let sql1 = `SELECT * FROM users WHERE personID > '${((countPage - 1) * countElements)}' LIMIT ${countElements}`;
+    let sql2 = `SELECT MAX(personID) FROM users`;
+    pool.query(sql2, function(err, data) {
         if(err) return console.log(err);
-        res.send(data)
+        quantityUsers = (data[0]['MAX(personID)']);
+        pool.query(sql1, function(err, data) {
+            if(err) return console.log(err);
+            res.send({ data, quantityUsers })
+        });
+    });
+});
+
+app.get("/profile/:id", function(req, res){
+    const id = req.params.id;
+    let sql1 = `SELECT * FROM users WHERE personID = ${id}`;
+    let sql2 = `SELECT * FROM posts  WHERE id_user = ${id}`;
+    let userData = [];
+    let userPosts = [];
+    pool.query(sql1, function(err, data) {
+        if(err) return console.log(err);
+        userData.push(data);
+        pool.query(sql2, function(err, data) {
+            if(err) return console.log(err);
+            userPosts.push(data)
+            res.send({ userData, userPosts })
+        });
     });
 });
 
